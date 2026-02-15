@@ -1,0 +1,181 @@
+# Terminal Feed Configuration
+# ===========================
+# Add ALL the Twitter/X handles you want to monitor from both accounts.
+# No need to categorize them - the filter engine will automatically detect
+# finance vs tech content and filter out lifestyle/personal noise.
+
+# Nitter instances to try (public mirrors of Twitter that expose RSS).
+# If one is down, the next is tried automatically.
+nitter_instances:
+  - "https://nitter.privacydev.net"
+  - "https://nitter.poast.org"
+  - "https://nitter.woodland.cafe"
+
+# How often to refresh the feed (in seconds)
+refresh_interval: 120
+
+# Maximum number of items to show in the feed at once
+max_feed_items: 200
+
+# Minimum relevance score to show a tweet (0 = show everything, higher = stricter)
+# Recommended: 1.0 to filter noise, 0 to see all
+min_score: 1.0
+
+# --- ACCOUNTS TO MONITOR ---
+# List ALL handles from both your Twitter accounts here.
+# Just the handle (no @). The filter will auto-detect what's finance vs tech.
+accounts:
+  # Example high-signal finance accounts:
+  - handle: "DeItaone"
+    label: "Walter Bloomberg"
+  - handle: "FirstSquawk"
+    label: "First Squawk"
+  - handle: "unusual_whales"
+    label: "Unusual Whales"
+  - handle: "LiveSquawk"
+    label: "LiveSquawk"
+  # Example high-signal tech accounts:
+  - handle: "ylecun"
+    label: "Yann LeCun"
+  - handle: "kaborafide"
+    label: "Kabora"
+  # Add your handles from BOTH accounts below:
+  # - handle: "somehandle"
+  #   label: "Display Name"
+
+# --- KEYWORD FILTERS ---
+# The engine uses these keywords to auto-categorize tweets and filter noise.
+# Tweets that don't match ANY keyword from either list are hidden.
+# Edit these to tune what shows up in your feed.
+
+finance_keywords:
+  - "earnings"
+  - "revenue"
+  - "GDP"
+  - "Fed"
+  - "FOMC"
+  - "rates"
+  - "inflation"
+  - "CPI"
+  - "PPI"
+  - "jobs"
+  - "payroll"
+  - "unemployment"
+  - "market"
+  - "stock"
+  - "bond"
+  - "treasury"
+  - "yield"
+  - "IPO"
+  - "SEC"
+  - "bull"
+  - "bear"
+  - "rally"
+  - "crash"
+  - "squeeze"
+  - "options"
+  - "puts"
+  - "calls"
+  - "volatility"
+  - "VIX"
+  - "S&P"
+  - "Nasdaq"
+  - "Dow"
+  - "futures"
+  - "forex"
+  - "crypto"
+  - "bitcoin"
+  - "BTC"
+  - "ETH"
+  - "ETF"
+  - "hedge"
+  - "dividend"
+  - "profit"
+  - "loss"
+  - "guidance"
+  - "analyst"
+  - "upgrade"
+  - "downgrade"
+  - "target"
+  - "buyback"
+  - "M&A"
+  - "merger"
+  - "acquisition"
+  - "$"
+
+tech_keywords:
+  - "AI"
+  - "GPT"
+  - "LLM"
+  - "transformer"
+  - "neural"
+  - "NVIDIA"
+  - "NVDA"
+  - "AMD"
+  - "TSMC"
+  - "Intel"
+  - "semiconductor"
+  - "chip"
+  - "SaaS"
+  - "cloud"
+  - "AWS"
+  - "Azure"
+  - "GCP"
+  - "API"
+  - "startup"
+  - "funding"
+  - "Series A"
+  - "Series B"
+  - "valuation"
+  - "unicorn"
+  - "AGI"
+  - "model"
+  - "inference"
+  - "training"
+  - "open source"
+  - "Apple"
+  - "Google"
+  - "Microsoft"
+  - "Meta"
+  - "OpenAI"
+  - "Anthropic"
+  - "Tesla"
+  - "robotics"
+  - "autonomous"
+  - "quantum"
+  - "cybersecurity"
+  - "breach"
+  - "hack"
+  - "data center"
+  - "GPU"
+  - "TPU"
+  - "compute"
+  - "scaling"
+  - "deploy"
+  - "infrastructure"
+  - "developer"
+  - "launch"
+  - "product"
+
+# --- NOISE WORDS ---
+# Tweets heavily featuring these words get penalized (lifestyle/personal noise)
+noise_keywords:
+  - "good morning"
+  - "gm everyone"
+  - "happy birthday"
+  - "lol"
+  - "lmao"
+  - "selfie"
+  - "dinner"
+  - "lunch"
+  - "vacation"
+  - "workout"
+  - "gym"
+  - "grateful"
+  - "blessed"
+  - "vibes"
+  - "thread 1/"
+  - "follow me"
+  - "giveaway"
+  - "retweet to win"
+  - "dm me"

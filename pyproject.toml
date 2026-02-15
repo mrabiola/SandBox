@@ -1,0 +1,20 @@
+[project]
+name = "terminal-feed"
+version = "0.1.0"
+description = "Bloomberg-style terminal news feed from Twitter/X - no API required"
+requires-python = ">=3.10"
+dependencies = [
+    "rich>=13.0",
+    "textual>=0.50.0",
+    "feedparser>=6.0",
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+    "pyyaml>=6.0",
+    "click>=8.0",
+]
+
+[project.scripts]
+termfeed = "src.main:cli"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
