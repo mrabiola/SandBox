@@ -1,52 +1,81 @@
-# Terminal Feed Configuration
-# ===========================
-# Add ALL the Twitter/X handles you want to monitor from both accounts.
-# No need to categorize them - the filter engine will automatically detect
-# finance vs tech content and filter out lifestyle/personal noise.
+# ============================================================
+#  TERMINAL FEED - Configuration
+# ============================================================
+# Replace logging into Twitter. Add your high-signal follows
+# from BOTH accounts below. The engine handles the rest:
+#   - Pulls their latest tweets (no Twitter API needed)
+#   - Filters out lifestyle/personal noise automatically
+#   - Surfaces only finance + tech signal
+#   - Discovers similar accounts you're NOT following yet
+# ============================================================
 
-# Nitter instances to try (public mirrors of Twitter that expose RSS).
-# If one is down, the next is tried automatically.
+# --- SCRAPER SETTINGS ---
 nitter_instances:
   - "https://nitter.privacydev.net"
   - "https://nitter.poast.org"
   - "https://nitter.woodland.cafe"
 
-# How often to refresh the feed (in seconds)
-refresh_interval: 120
+refresh_interval: 120   # seconds between refreshes
+max_feed_items: 200     # max items in feed at once
+min_score: 1.0          # minimum relevance score (0 = show all, higher = stricter)
 
-# Maximum number of items to show in the feed at once
-max_feed_items: 200
+# --- DISCOVERY SETTINGS ---
+# Automatically finds new high-signal accounts by analyzing who
+# your existing follows mention and interact with.
+discovery:
+  enabled: true
+  run_every: 3          # run discovery every N refresh cycles
+  min_mentions: 2       # account must be mentioned at least this many times
+  max_suggestions: 10   # max new accounts to suggest
 
-# Minimum relevance score to show a tweet (0 = show everything, higher = stricter)
-# Recommended: 1.0 to filter noise, 0 to see all
-min_score: 1.0
+# ============================================================
+#  YOUR HIGH-SIGNAL ACCOUNTS
+# ============================================================
+# Pull the handles you actually care about from BOTH your
+# Twitter accounts. Just the ones that post finance/tech signal.
+# Everything else (friends, lifestyle, memes) - leave them out.
+#
+# Format:
+#   - handle: "thehandle"      (no @ symbol)
+#     label: "Display Name"    (what shows in the feed)
+#     source: "account1"       (optional: which of your 2 accounts)
 
-# --- ACCOUNTS TO MONITOR ---
-# List ALL handles from both your Twitter accounts here.
-# Just the handle (no @). The filter will auto-detect what's finance vs tech.
 accounts:
-  # Example high-signal finance accounts:
+  # ---- FROM YOUR FIRST TWITTER ACCOUNT ----
+  # Example: your finance-heavy account
   - handle: "DeItaone"
     label: "Walter Bloomberg"
+    source: "account1"
   - handle: "FirstSquawk"
     label: "First Squawk"
+    source: "account1"
   - handle: "unusual_whales"
     label: "Unusual Whales"
+    source: "account1"
   - handle: "LiveSquawk"
     label: "LiveSquawk"
-  # Example high-signal tech accounts:
+    source: "account1"
+
+  # ---- FROM YOUR SECOND TWITTER ACCOUNT ----
+  # Example: your tech-heavy account
   - handle: "ylecun"
     label: "Yann LeCun"
+    source: "account2"
   - handle: "kaborafide"
     label: "Kabora"
-  # Add your handles from BOTH accounts below:
+    source: "account2"
+
+  # ---- ADD YOURS BELOW ----
   # - handle: "somehandle"
   #   label: "Display Name"
+  #   source: "account1"   # or "account2"
 
-# --- KEYWORD FILTERS ---
-# The engine uses these keywords to auto-categorize tweets and filter noise.
-# Tweets that don't match ANY keyword from either list are hidden.
-# Edit these to tune what shows up in your feed.
+# ============================================================
+#  KEYWORD FILTERS
+# ============================================================
+# The engine uses these to auto-detect what's finance, what's
+# tech, and what's noise. Tweets that match ZERO keywords from
+# either list get filtered out (they're probably personal/noise).
 
 finance_keywords:
   - "earnings"
@@ -157,8 +186,13 @@ tech_keywords:
   - "launch"
   - "product"
 
-# --- NOISE WORDS ---
-# Tweets heavily featuring these words get penalized (lifestyle/personal noise)
+# ============================================================
+#  NOISE FILTER
+# ============================================================
+# Tweets matching these words get penalized/hidden.
+# This is how personal/lifestyle content gets filtered out
+# even from accounts that ALSO post finance/tech.
+
 noise_keywords:
   - "good morning"
   - "gm everyone"
@@ -179,3 +213,15 @@ noise_keywords:
   - "giveaway"
   - "retweet to win"
   - "dm me"
+  - "my wife"
+  - "my husband"
+  - "my kids"
+  - "brunch"
+  - "coffee"
+  - "mood"
+  - "tbh"
+  - "ngl"
+  - "rant"
+  - "vent"
+  - "personal"
+  - "off topic"
