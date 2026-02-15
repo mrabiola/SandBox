@@ -1,12 +1,8 @@
 # ============================================================
 #  TERMINAL FEED - Configuration
 # ============================================================
-# Replace logging into Twitter. Add your high-signal follows
-# from BOTH accounts below. The engine handles the rest:
-#   - Pulls their latest tweets (no Twitter API needed)
-#   - Filters out lifestyle/personal noise automatically
-#   - Surfaces only finance + tech signal
-#   - Discovers similar accounts you're NOT following yet
+# Accounts are managed in data/accounts.json (use CLI commands).
+# This file controls scraping, filtering, and discovery settings.
 # ============================================================
 
 # --- SCRAPER SETTINGS ---
@@ -20,8 +16,9 @@ max_feed_items: 200     # max items in feed at once
 min_score: 1.0          # minimum relevance score (0 = show all, higher = stricter)
 
 # --- DISCOVERY SETTINGS ---
-# Automatically finds new high-signal accounts by analyzing who
-# your existing follows mention and interact with.
+# Finds new high-signal accounts by analyzing who your existing
+# follows mention and interact with. Adds them as "suggested"
+# in the accounts table for you to approve.
 discovery:
   enabled: true
   run_every: 3          # run discovery every N refresh cycles
@@ -29,53 +26,10 @@ discovery:
   max_suggestions: 10   # max new accounts to suggest
 
 # ============================================================
-#  YOUR HIGH-SIGNAL ACCOUNTS
-# ============================================================
-# Pull the handles you actually care about from BOTH your
-# Twitter accounts. Just the ones that post finance/tech signal.
-# Everything else (friends, lifestyle, memes) - leave them out.
-#
-# Format:
-#   - handle: "thehandle"      (no @ symbol)
-#     label: "Display Name"    (what shows in the feed)
-#     source: "account1"       (optional: which of your 2 accounts)
-
-accounts:
-  # ---- FROM YOUR FIRST TWITTER ACCOUNT ----
-  # Example: your finance-heavy account
-  - handle: "DeItaone"
-    label: "Walter Bloomberg"
-    source: "account1"
-  - handle: "FirstSquawk"
-    label: "First Squawk"
-    source: "account1"
-  - handle: "unusual_whales"
-    label: "Unusual Whales"
-    source: "account1"
-  - handle: "LiveSquawk"
-    label: "LiveSquawk"
-    source: "account1"
-
-  # ---- FROM YOUR SECOND TWITTER ACCOUNT ----
-  # Example: your tech-heavy account
-  - handle: "ylecun"
-    label: "Yann LeCun"
-    source: "account2"
-  - handle: "kaborafide"
-    label: "Kabora"
-    source: "account2"
-
-  # ---- ADD YOURS BELOW ----
-  # - handle: "somehandle"
-  #   label: "Display Name"
-  #   source: "account1"   # or "account2"
-
-# ============================================================
 #  KEYWORD FILTERS
 # ============================================================
-# The engine uses these to auto-detect what's finance, what's
-# tech, and what's noise. Tweets that match ZERO keywords from
-# either list get filtered out (they're probably personal/noise).
+# Auto-detect finance vs tech. Tweets matching ZERO keywords
+# from either list get filtered out as noise.
 
 finance_keywords:
   - "earnings"
@@ -189,9 +143,7 @@ tech_keywords:
 # ============================================================
 #  NOISE FILTER
 # ============================================================
-# Tweets matching these words get penalized/hidden.
-# This is how personal/lifestyle content gets filtered out
-# even from accounts that ALSO post finance/tech.
+# Penalize/hide personal and lifestyle content.
 
 noise_keywords:
   - "good morning"

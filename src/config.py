@@ -16,10 +16,10 @@ class FeedConfig:
     refresh_interval: int = 120
     max_feed_items: int = 200
     min_score: float = 1.0
-    accounts: list[dict[str, str]] = field(default_factory=list)
     finance_keywords: list[str] = field(default_factory=list)
     tech_keywords: list[str] = field(default_factory=list)
     noise_keywords: list[str] = field(default_factory=list)
+    discovery: dict | None = None
 
 
 def load_config(config_path: str | Path = "config/feeds.yaml") -> FeedConfig:
@@ -39,8 +39,8 @@ def load_config(config_path: str | Path = "config/feeds.yaml") -> FeedConfig:
         refresh_interval=raw.get("refresh_interval", 120),
         max_feed_items=raw.get("max_feed_items", 200),
         min_score=raw.get("min_score", 1.0),
-        accounts=raw.get("accounts", []),
         finance_keywords=raw.get("finance_keywords", []),
         tech_keywords=raw.get("tech_keywords", []),
         noise_keywords=raw.get("noise_keywords", []),
+        discovery=raw.get("discovery"),
     )

@@ -1,0 +1,72 @@
+[
+  {
+    "handle": "zephyr_z9",
+    "label": "Zephyr",
+    "category": "semis",
+    "source": "",
+    "added_by": "manual",
+    "status": "active",
+    "added_at": "2026-02-15T00:00:00+00:00",
+    "notes": "Semiconductors"
+  },
+  {
+    "handle": "jukan05",
+    "label": "Jukan",
+    "category": "semis",
+    "source": "",
+    "added_by": "manual",
+    "status": "active",
+    "added_at": "2026-02-15T00:00:00+00:00",
+    "notes": "Semiconductors, chips, TSMC, Intel, NVIDIA"
+  },
+  {
+    "handle": "MacroOps",
+    "label": "Alex Barrow",
+    "category": "macro",
+    "source": "",
+    "added_by": "manual",
+    "status": "active",
+    "added_at": "2026-02-15T00:00:00+00:00",
+    "notes": "Macro Ops - technicals, sentiment, macro"
+  },
+  {
+    "handle": "marketplunger1",
+    "label": "Brandon Beylo",
+    "category": "finance",
+    "source": "",
+    "added_by": "manual",
+    "status": "active",
+    "added_at": "2026-02-15T00:00:00+00:00",
+    "notes": "Value investing, small/micro-cap, Macro Ops senior partner"
+  },
+  {
+    "handle": "DeItaone",
+    "label": "Walter Bloomberg",
+    "category": "finance",
+    "source": "",
+    "added_by": "manual",
+    "status": "active",
+    "added_at": "2026-02-15T00:00:00+00:00",
+    "notes": "Breaking financial news headlines"
+  },
+  {
+    "handle": "FirstSquawk",
+    "label": "First Squawk",
+    "category": "finance",
+    "source": "",
+    "added_by": "manual",
+    "status": "active",
+    "added_at": "2026-02-15T00:00:00+00:00",
+    "notes": "Real-time market news"
+  },
+  {
+    "handle": "unusual_whales",
+    "label": "Unusual Whales",
+    "category": "finance",
+    "source": "",
+    "added_by": "manual",
+    "status": "active",
+    "added_at": "2026-02-15T00:00:00+00:00",
+    "notes": "Options flow, unusual activity"
+  }
+]
