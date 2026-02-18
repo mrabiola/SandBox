@@ -20,6 +20,7 @@ class FeedConfig:
     tech_keywords: list[str] = field(default_factory=list)
     noise_keywords: list[str] = field(default_factory=list)
     discovery: dict | None = None
+    twitter_api: dict | None = None
 
 
 def load_config(config_path: str | Path = "config/feeds.yaml") -> FeedConfig:
@@ -43,4 +44,5 @@ def load_config(config_path: str | Path = "config/feeds.yaml") -> FeedConfig:
         tech_keywords=raw.get("tech_keywords", []),
         noise_keywords=raw.get("noise_keywords", []),
         discovery=raw.get("discovery"),
+        twitter_api=raw.get("twitter_api"),
     )

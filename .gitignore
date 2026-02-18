@@ -14,3 +14,4 @@ env/
 .termfeed/
 *.cookie
 *.cookies
+data/.twitter_api_state.json

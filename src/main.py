@@ -2,11 +2,16 @@
 
 Main entry point. Orchestrates scraping, filtering, and terminal display.
 All account management goes through data/accounts.json (the accounts table).
+
+Scraping priority:
+  1. Twitter API (if TWITTER_BEARER_TOKEN is set)
+  2. Nitter RSS (free fallback, no auth needed)
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import sys
 import time
 
@@ -28,6 +33,7 @@ from src.config import load_config
 from src.filters.content_filter import ContentFilter
 from src.scrapers.discovery import AccountDiscovery
 from src.scrapers.nitter import NitterScraper
+from src.scrapers.twitter_api import TwitterAPI
 from src.ui.terminal_feed import TerminalFeed
 
 logger = logging.getLogger("termfeed")
@@ -40,6 +46,28 @@ def setup_logging(verbose: bool = False):
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%H:%M:%S",
     )
+
+
+def create_scraper(config):
+    """Create the best available scraper.
+
+    Returns (scraper, scraper_name) tuple.
+    Priority: Twitter API > Nitter RSS.
+    """
+    bearer_token = os.environ.get("TWITTER_BEARER_TOKEN", "")
+
+    if bearer_token:
+        api_cfg = config.twitter_api or {}
+        monthly_limit = api_cfg.get("monthly_limit", 10_000)
+        scraper = TwitterAPI(bearer_token=bearer_token, monthly_limit=monthly_limit)
+
+        if not scraper.is_quota_exhausted:
+            return scraper, "twitter_api"
+        else:
+            logger.warning("Twitter API quota exhausted, falling back to Nitter")
+            scraper.close()
+
+    return NitterScraper(instances=config.nitter_instances), "nitter"
 
 
 def fetch_and_filter(config, scraper, content_filter, accounts):
@@ -84,10 +112,10 @@ def watch(ctx, category):
     accounts = get_active_accounts()
 
     if not accounts:
-        click.echo("No active accounts. Use 'python -m src.main add <handle>' first.")
+        click.echo("No active accounts. Use 'termfeed add <handle>' first.")
         return
 
-    scraper = NitterScraper(instances=config.nitter_instances)
+    scraper, scraper_name = create_scraper(config)
     content_filter = ContentFilter(
         finance_keywords=config.finance_keywords,
         tech_keywords=config.tech_keywords,
@@ -102,24 +130,39 @@ def watch(ctx, category):
     disc_every = disc_cfg.get("run_every", 3) if disc_cfg else 3
     refresh_count = 0
 
+    click.echo(f"Using {scraper_name} scraper | {len(accounts)} accounts")
+
     try:
         with feed_ui.create_live_display() as live:
             while True:
                 try:
+                    # If API quota ran out mid-session, switch to Nitter
+                    if scraper_name == "twitter_api" and scraper.is_quota_exhausted:
+                        scraper.close()
+                        scraper = NitterScraper(instances=config.nitter_instances)
+                        scraper_name = "nitter"
+                        logger.warning("API quota exhausted, switched to Nitter")
+
                     scored, total_raw = fetch_and_filter(config, scraper, content_filter, accounts)
-                    status_msg = (
-                        f"Last refresh: {time.strftime('%H:%M:%S')} | "
-                        f"{len(accounts)} accounts | "
-                        f"Next in {config.refresh_interval}s | "
-                        f"Ctrl+C to quit"
-                    )
+
+                    # Build status line
+                    parts = [
+                        f"{time.strftime('%H:%M:%S')}",
+                        f"{scraper_name}",
+                        f"{len(accounts)} accts",
+                    ]
+                    if scraper_name == "twitter_api":
+                        parts.append(f"{scraper.tweets_remaining} reads left")
+                    parts.append(f"next in {config.refresh_interval}s")
+                    status_msg = " | ".join(parts)
 
                     # Run discovery periodically
                     refresh_count += 1
                     if disc_enabled and refresh_count % disc_every == 0:
                         all_tweets = [s.tweet for s in scored]
                         known = [a["handle"] for a in accounts]
-                        discovery = AccountDiscovery(scraper, known)
+                        nitter = NitterScraper(instances=config.nitter_instances)
+                        discovery = AccountDiscovery(nitter, known)
                         discovered = discovery.run_discovery(
                             all_tweets,
                             finance_keywords=config.finance_keywords,
@@ -127,13 +170,14 @@ def watch(ctx, category):
                             min_mentions=disc_cfg.get("min_mentions", 2),
                             max_results=disc_cfg.get("max_suggestions", 10),
                         )
+                        nitter.close()
                         if discovered:
                             new_count = add_discovered_accounts([
                                 {"handle": d.handle, "display_name": d.display_name, "reason": d.reason}
                                 for d in discovered
                             ])
                             if new_count:
-                                status_msg += f" | {new_count} new account suggestions!"
+                                status_msg += f" | {new_count} new suggestions!"
 
                 except Exception as e:
                     logger.error(f"Fetch error: {e}")
@@ -166,10 +210,10 @@ def snapshot(ctx, category):
     accounts = get_active_accounts()
 
     if not accounts:
-        click.echo("No active accounts. Use 'python -m src.main add <handle>' first.")
+        click.echo("No active accounts. Use 'termfeed add <handle>' first.")
         return
 
-    scraper = NitterScraper(instances=config.nitter_instances)
+    scraper, scraper_name = create_scraper(config)
     content_filter = ContentFilter(
         finance_keywords=config.finance_keywords,
         tech_keywords=config.tech_keywords,
@@ -178,7 +222,7 @@ def snapshot(ctx, category):
     feed_ui = TerminalFeed()
     cat_filter = category if category != "all" else None
 
-    click.echo("Fetching tweets...")
+    click.echo(f"Fetching via {scraper_name}...")
     try:
         scored, total_raw = fetch_and_filter(config, scraper, content_filter, accounts)
         feed_ui.render_static(scored, total_before_filter=total_raw, category_filter=cat_filter)
@@ -203,7 +247,7 @@ def snapshot(ctx, category):
 def add(handle, label, category, source, notes):
     """Add a new account to monitor.
 
-    Example: python -m src.main add zephyr_z9 -l "Zephyr" -cat semis
+    Example: termfeed add zephyr_z9 -l "Zephyr" -cat semis
     """
     success = add_account(
         handle=handle,
@@ -281,7 +325,7 @@ def suggestions():
         click.echo("No pending suggestions. Discovery runs automatically during 'watch'.")
         return
     print_accounts_table(accounts=suggested)
-    click.echo("\nUse 'python -m src.main approve <handle>' to activate.")
+    click.echo("\nUse 'termfeed approve <handle>' to activate.")
 
 
 @cli.command()
@@ -295,26 +339,29 @@ def discover(ctx):
         click.echo("No active accounts to discover from.")
         return
 
-    scraper = NitterScraper(instances=config.nitter_instances)
+    scraper, scraper_name = create_scraper(config)
     known = [a["handle"] for a in accounts]
 
-    click.echo("Fetching tweets from your accounts...")
+    click.echo(f"Fetching via {scraper_name}...")
     account_dicts = [{"handle": a["handle"], "label": a.get("label", "")} for a in accounts]
     all_tweets = scraper.fetch_all(account_dicts)
 
     if not all_tweets:
-        click.echo("No tweets fetched. Nitter instances may be down.")
+        click.echo("No tweets fetched.")
         scraper.close()
         return
 
     click.echo(f"Analyzing {len(all_tweets)} tweets for new accounts...")
-    discovery = AccountDiscovery(scraper, known)
+    # Discovery validation always uses Nitter (free, doesn't burn API quota)
+    nitter = NitterScraper(instances=config.nitter_instances)
+    discovery = AccountDiscovery(nitter, known)
     discovered = discovery.run_discovery(
         all_tweets,
         finance_keywords=config.finance_keywords,
         tech_keywords=config.tech_keywords,
     )
     scraper.close()
+    nitter.close()
 
     if not discovered:
         click.echo("No new accounts discovered this time.")
@@ -327,7 +374,28 @@ def discover(ctx):
     click.echo(f"\nFound {len(discovered)} accounts, {new_count} new:")
     for d in discovered:
         click.echo(f"  @{d.handle:20s} {d.reason}")
-    click.echo("\nUse 'python -m src.main suggestions' to review, 'approve <handle>' to activate.")
+    click.echo("\nUse 'termfeed suggestions' to review, 'termfeed approve <handle>' to activate.")
+
+
+@cli.command()
+def status():
+    """Show scraper status and API usage."""
+    bearer_token = os.environ.get("TWITTER_BEARER_TOKEN", "")
+    if not bearer_token:
+        click.echo("No TWITTER_BEARER_TOKEN set. Using Nitter (free, no auth).")
+        click.echo("\nTo use the Twitter API:")
+        click.echo("  1. Get a bearer token from developer.x.com")
+        click.echo("  2. export TWITTER_BEARER_TOKEN='your_token_here'")
+        return
+
+    api = TwitterAPI(bearer_token=bearer_token)
+    s = api.status()
+    click.echo(f"Twitter API Status ({s['month']}):")
+    click.echo(f"  Tweets read:    {s['tweets_read']:,}")
+    click.echo(f"  Monthly limit:  {s['monthly_limit']:,}")
+    click.echo(f"  Remaining:      {s['remaining']:,}")
+    click.echo(f"  Cached users:   {s['cached_users']}")
+    api.close()
 
 
 if __name__ == "__main__":
