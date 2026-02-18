@@ -4,16 +4,16 @@ Main entry point. Orchestrates scraping, filtering, and terminal display.
 All account management goes through data/accounts.json (the accounts table).
 
 Scraping priority:
-  1. Twitter API (if TWITTER_BEARER_TOKEN is set)
-  2. Nitter RSS (free fallback, no auth needed)
+  1. Twikit (your Twitter login, internal API - free, reliable)
+  2. Nitter RSS (fallback if not logged in)
 """
 
 from __future__ import annotations
 
 import logging
-import os
 import sys
 import time
+from pathlib import Path
 
 import click
 
@@ -33,7 +33,7 @@ from src.config import load_config
 from src.filters.content_filter import ContentFilter
 from src.scrapers.discovery import AccountDiscovery
 from src.scrapers.nitter import NitterScraper
-from src.scrapers.twitter_api import TwitterAPI
+from src.scrapers.twikit_scraper import TwikitScraper, COOKIES_FILE
 from src.ui.terminal_feed import TerminalFeed
 
 logger = logging.getLogger("termfeed")
@@ -52,20 +52,14 @@ def create_scraper(config):
     """Create the best available scraper.
 
     Returns (scraper, scraper_name) tuple.
-    Priority: Twitter API > Nitter RSS.
+    Priority: Twikit (logged in) > Nitter RSS.
     """
-    bearer_token = os.environ.get("TWITTER_BEARER_TOKEN", "")
-
-    if bearer_token:
-        api_cfg = config.twitter_api or {}
-        monthly_limit = api_cfg.get("monthly_limit", 10_000)
-        scraper = TwitterAPI(bearer_token=bearer_token, monthly_limit=monthly_limit)
-
-        if not scraper.is_quota_exhausted:
-            return scraper, "twitter_api"
-        else:
-            logger.warning("Twitter API quota exhausted, falling back to Nitter")
-            scraper.close()
+    if COOKIES_FILE.exists():
+        scraper = TwikitScraper()
+        if scraper.is_logged_in:
+            return scraper, "twitter"
+        # Cookies exist but failed to load - try anyway, might work on first request
+        return scraper, "twitter"
 
     return NitterScraper(instances=config.nitter_instances), "nitter"
 
@@ -100,6 +94,36 @@ def cli(ctx, config, verbose):
 
 
 # ──────────────────────────────────────────────
+#  AUTH
+# ──────────────────────────────────────────────
+
+@cli.command()
+@click.option("--username", "-u", prompt="Twitter username or phone", help="Your Twitter handle")
+@click.option("--email", "-e", prompt="Email (helps avoid verification)", help="Your email")
+@click.option("--password", "-p", prompt=True, hide_input=True, help="Your password")
+def login(username, email, password):
+    """Log into Twitter. Saves session cookies for reuse.
+
+    You only need to do this once. Session persists until cookies expire.
+    """
+    import asyncio
+
+    scraper = TwikitScraper()
+
+    async def do_login():
+        return await scraper.login(username, email, password)
+
+    success = asyncio.run(do_login())
+    if success:
+        click.echo(f"Logged in as @{username}. Cookies saved to {COOKIES_FILE}")
+        click.echo("You're good to go. Run 'termfeed watch' to start your feed.")
+    else:
+        click.echo("Login failed. Check your credentials and try again.", err=True)
+        click.echo("If you have 2FA enabled, you may need to use an app password.", err=True)
+        sys.exit(1)
+
+
+# ──────────────────────────────────────────────
 #  FEED COMMANDS
 # ──────────────────────────────────────────────
 
@@ -116,6 +140,11 @@ def watch(ctx, category):
         return
 
     scraper, scraper_name = create_scraper(config)
+
+    if scraper_name == "nitter":
+        click.echo("Not logged into Twitter. Using Nitter (less reliable).")
+        click.echo("Run 'termfeed login' for direct Twitter access.\n")
+
     content_filter = ContentFilter(
         finance_keywords=config.finance_keywords,
         tech_keywords=config.tech_keywords,
@@ -130,33 +159,19 @@ def watch(ctx, category):
     disc_every = disc_cfg.get("run_every", 3) if disc_cfg else 3
     refresh_count = 0
 
-    click.echo(f"Using {scraper_name} scraper | {len(accounts)} accounts")
+    click.echo(f"[{scraper_name}] {len(accounts)} accounts | refreshing every {config.refresh_interval}s")
 
     try:
         with feed_ui.create_live_display() as live:
             while True:
                 try:
-                    # If API quota ran out mid-session, switch to Nitter
-                    if scraper_name == "twitter_api" and scraper.is_quota_exhausted:
-                        scraper.close()
-                        scraper = NitterScraper(instances=config.nitter_instances)
-                        scraper_name = "nitter"
-                        logger.warning("API quota exhausted, switched to Nitter")
-
                     scored, total_raw = fetch_and_filter(config, scraper, content_filter, accounts)
+                    status_msg = (
+                        f"{time.strftime('%H:%M:%S')} | {scraper_name} | "
+                        f"{len(accounts)} accts | next in {config.refresh_interval}s"
+                    )
 
-                    # Build status line
-                    parts = [
-                        f"{time.strftime('%H:%M:%S')}",
-                        f"{scraper_name}",
-                        f"{len(accounts)} accts",
-                    ]
-                    if scraper_name == "twitter_api":
-                        parts.append(f"{scraper.tweets_remaining} reads left")
-                    parts.append(f"next in {config.refresh_interval}s")
-                    status_msg = " | ".join(parts)
-
-                    # Run discovery periodically
+                    # Run discovery periodically (uses Nitter to avoid burning main session)
                     refresh_count += 1
                     if disc_enabled and refresh_count % disc_every == 0:
                         all_tweets = [s.tweet for s in scored]
@@ -352,7 +367,6 @@ def discover(ctx):
         return
 
     click.echo(f"Analyzing {len(all_tweets)} tweets for new accounts...")
-    # Discovery validation always uses Nitter (free, doesn't burn API quota)
     nitter = NitterScraper(instances=config.nitter_instances)
     discovery = AccountDiscovery(nitter, known)
     discovered = discovery.run_discovery(
@@ -379,23 +393,17 @@ def discover(ctx):
 
 @cli.command()
 def status():
-    """Show scraper status and API usage."""
-    bearer_token = os.environ.get("TWITTER_BEARER_TOKEN", "")
-    if not bearer_token:
-        click.echo("No TWITTER_BEARER_TOKEN set. Using Nitter (free, no auth).")
-        click.echo("\nTo use the Twitter API:")
-        click.echo("  1. Get a bearer token from developer.x.com")
-        click.echo("  2. export TWITTER_BEARER_TOKEN='your_token_here'")
-        return
+    """Show login and scraper status."""
+    if COOKIES_FILE.exists():
+        click.echo(f"Logged in (cookies: {COOKIES_FILE})")
+        click.echo("Scraper: twitter (direct, via twikit)")
+    else:
+        click.echo("Not logged in. Using Nitter RSS fallback.")
+        click.echo("\nRun 'termfeed login' to connect your Twitter account.")
 
-    api = TwitterAPI(bearer_token=bearer_token)
-    s = api.status()
-    click.echo(f"Twitter API Status ({s['month']}):")
-    click.echo(f"  Tweets read:    {s['tweets_read']:,}")
-    click.echo(f"  Monthly limit:  {s['monthly_limit']:,}")
-    click.echo(f"  Remaining:      {s['remaining']:,}")
-    click.echo(f"  Cached users:   {s['cached_users']}")
-    api.close()
+    accounts = get_active_accounts()
+    suggested = get_suggested_accounts()
+    click.echo(f"\nAccounts: {len(accounts)} active, {len(suggested)} suggested")
 
 
 if __name__ == "__main__":

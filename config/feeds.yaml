@@ -15,12 +15,6 @@ refresh_interval: 120   # seconds between refreshes
 max_feed_items: 200     # max items in feed at once
 min_score: 1.0          # minimum relevance score (0 = show all, higher = stricter)
 
-# --- TWITTER API ---
-# Set TWITTER_BEARER_TOKEN env var to use the API directly.
-# Falls back to Nitter RSS if no token is set.
-twitter_api:
-  monthly_limit: 10000  # Basic tier: 10K/mo, adjust for your plan
-
 # --- DISCOVERY SETTINGS ---
 # Finds new high-signal accounts by analyzing who your existing
 # follows mention and interact with. Adds them as "suggested"

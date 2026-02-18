@@ -15,3 +15,4 @@ env/
 *.cookie
 *.cookies
 data/.twitter_api_state.json
+data/.twitter_cookies.json

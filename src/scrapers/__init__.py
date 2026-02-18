@@ -1,7 +1,6 @@
-from .browser import BrowserScraper
 from .discovery import AccountDiscovery
 from .models import Tweet
 from .nitter import NitterScraper
-from .twitter_api import TwitterAPI
+from .twikit_scraper import TwikitScraper
 
-__all__ = ["AccountDiscovery", "BrowserScraper", "NitterScraper", "TwitterAPI", "Tweet"]
+__all__ = ["AccountDiscovery", "NitterScraper", "TwikitScraper", "Tweet"]
